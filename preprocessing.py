@@ -26,4 +26,4 @@ def process_files_in_directory(directory_path):
 
 def load_data(file_path):
     df = pd.read_json(file_path, lines=True)
-    return df[columns_to_keep]
+    return df[columns_to_keep].head(10)

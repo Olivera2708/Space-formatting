@@ -7,13 +7,13 @@ import re
 def create_vocab(tokens, vocab_stoi, vocab_itos):
     for current_token, current_type in tokens:
         if current_type == 6:
-            if '\t' in current_token:
+            if '\t' in current_token and '<TAB>' not in vocab_stoi:
                 vocab_stoi["<TAB>"] = len(vocab_stoi)
                 vocab_itos[len(vocab_itos)] = "<TAB>"
-            elif '\n' in current_token:
+            elif '\n' in current_token and '<NEWLINE>' not in vocab_stoi:
                 vocab_stoi["<NEWLINE>"] = len(vocab_stoi)
                 vocab_itos[len(vocab_itos)] = "<NEWLINE>"
-            else:
+            elif '<SPACE>' not in vocab_stoi:
                 vocab_stoi["<SPACE>"] = len(vocab_stoi)
                 vocab_itos[len(vocab_itos)] = "<SPACE>"
 
