@@ -3,7 +3,7 @@ import os
 from format_java import format_java_code
 
 
-columns_to_keep = ['code']
+columns_to_keep = ['code', 'formatted']
 
 def process_files_in_directory(directory_path):
     combined_data = []
