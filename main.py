@@ -1,7 +1,7 @@
 import preprocessing
 from sklearn.model_selection import train_test_split
 from format_java import format_java_code, tokenize_and_create_input_output, tokenize_and_classify, create_vocab
-from model import CodeFormatterModel
+from model import TokenSpacingModel
 import torch
 import random
 from torch.utils.data import DataLoader, TensorDataset
@@ -51,18 +51,16 @@ def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_
         model.train()
         total_loss = 0
 
-        for batch_idx, (input_batch, output_batch) in enumerate(dataloader):
+        for input_batch, output_batch in dataloader:
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
-
             optimizer.zero_grad()
             spacing_type_pred, length_of_spacing_pred = model(input_batch)
 
-            print(input_batch)
-            print(spacing_type_pred)
-            print(length_of_spacing_pred)
+            spacing_output = output_batch[:, 0][:-1]
+            length_output = output_batch[:, 1][:-1].view(-1, 1).float()
 
-            loss_type = loss_fn_type(spacing_type_pred, output_batch[:, 0].long())
-            loss_length = loss_fn_length(length_of_spacing_pred, output_batch[:, 1])
+            loss_type = loss_fn_type(spacing_type_pred, spacing_output)
+            loss_length = loss_fn_length(length_of_spacing_pred, length_output)
             total_loss_batch = loss_type + loss_length
             total_loss += total_loss_batch.item()
 
@@ -72,45 +70,59 @@ def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_
         print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss / len(dataloader)}")
 
 
-def eval(model, validation_inputs, validation_outputs, batch_size, loss_fn_type, loss_fn_length, device):
-    model.eval()
-    total_loss_type = 0
-    total_loss_length = 0
-    correct_top1 = 0
-    correct_top3 = 0
-    total = 0
-    
-    val_data = TensorDataset(validation_inputs, validation_outputs)
-    val_loader = DataLoader(val_data, batch_size=batch_size)
+import torch
+from torch.utils.data import DataLoader, TensorDataset
 
+def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_threshold=0.1):
+    model.eval()
+    dataset = TensorDataset(eval_inputs, eval_outputs)
+    dataloader = DataLoader(dataset, batch_size=batch_size)
+
+    correct_combined = 0  # Correct predictions for both type and length
+    total_samples = 0  # Total number of samples
+
+    correct_type = 0  # Correct predictions for spacing type
+    total_type = 0  # Total number of samples for spacing type
+    
+    correct_length = 0  # Correct predictions for spacing length (within threshold)
+    total_length = 0  # Total number of samples for spacing length
+    
     with torch.no_grad():
-        for input_batch, output_batch in val_loader:
+        for input_batch, output_batch in dataloader:
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
 
-            spacing_type, length_of_spacing = model(*input_batch)
+            # Get model predictions
+            spacing_type_pred, length_of_spacing_pred = model(input_batch)
 
-            # Calculate the individual losses
-            loss_type = loss_fn_type(spacing_type, output_batch[:, 0])
-            loss_length = loss_fn_length(length_of_spacing, output_batch[:, 1])
+            # Calculate Top-1 accuracy for spacing type (classification task)
+            _, top1_pred_type = torch.max(spacing_type_pred, dim=1)
+            correct_type += torch.sum(top1_pred_type == output_batch[:, 0][:-1]).item()
+            total_type += len(input_batch)
 
-            total_loss_type += loss_type.item()
-            total_loss_length += loss_length.item()
+            # Calculate accuracy for spacing length (regression task)
+            correct_length += torch.sum(torch.abs(length_of_spacing_pred.squeeze() - output_batch[:, 1][:-1]) < length_threshold).item()
+            total_length += len(input_batch)
 
-            # Top-1 and Top-3 accuracy
-            _, top1_pred = torch.max(spacing_type, dim=-1)
-            top3_pred = torch.topk(spacing_type, 3, dim=-1).indices
+            # Combined accuracy for both spacing type and spacing length
+            combined_correct = torch.sum(
+                (top1_pred_type == output_batch[:, 0][:-1]) & 
+                (torch.abs(length_of_spacing_pred.squeeze() - output_batch[:, 1][:-1]) < length_threshold)
+            ).item()
 
-            correct_top1 += (top1_pred == output_batch[:, 0]).sum().item()
-            correct_top3 += (output_batch[:, 0].unsqueeze(-1) == top3_pred).any(dim=-1).sum().item()
+            correct_combined += combined_correct
+            total_samples += len(input_batch)
 
-            total += output_batch.numel()
+    # Calculate and print individual accuracies
+    top1_accuracy_type = correct_type / total_type * 100
+    print(f"Top-1 Accuracy for Spacing Type: {top1_accuracy_type:.2f}%")
 
-    avg_loss_type = total_loss_type / len(val_loader)
-    avg_loss_length = total_loss_length / len(val_loader)
-    top1_accuracy = correct_top1 / total * 100
-    top3_accuracy = correct_top3 / total * 100
+    top1_accuracy_length = correct_length / total_length * 100
+    print(f"Top-1 Accuracy for Spacing Length: {top1_accuracy_length:.2f}%")
 
-    print(f"Validation Loss Type: {avg_loss_type:.4f}, Loss Length: {avg_loss_length:.4f}, Top-1 Accuracy: {top1_accuracy:.2f}%, Top-3 Accuracy: {top3_accuracy:.2f}%")
+    # Calculate and print combined accuracy for both type and length
+    combined_accuracy = correct_combined / total_samples * 100
+    print(f"Combined Accuracy (Spacing Type + Spacing Length): {combined_accuracy:.2f}%")
+
 
 if __name__ == "__main__":
     # create_datasets()
@@ -125,7 +137,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize model, loss function, and optimizer
-    code_model = CodeFormatterModel(vocab_size).to(device)
+    code_model = TokenSpacingModel(vocab_size).to(device)
     loss_fn_type = torch.nn.CrossEntropyLoss()
     loss_fn_length = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(code_model.parameters(), lr=0.001)
@@ -135,4 +147,4 @@ if __name__ == "__main__":
 
     # Train and evaluate the model
     train(code_model, epochs, training_inputs, training_outputs, batch_size, loss_fn_type, loss_fn_length, optimizer, device)
-    # eval(code_model, validation_inputs, validation_outputs, batch_size, vocab_size, vocab_itos, loss_fn, device)
+    evaluate(code_model, validation_inputs, validation_outputs, batch_size, device)

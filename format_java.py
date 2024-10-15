@@ -83,8 +83,9 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
             pass
         i += 1
 
-    input.append((vocab_stoi[tokens[-1][0]], tokens[-1][1]))
-    output.append((0, 0))
+    if tokens[-1][1] != 6:
+        input.append((vocab_stoi[tokens[-1][0]], tokens[-1][1]))
+        output.append((0, 0))
     return input, output
 
 def wrap_in_class(snippet):
