@@ -55,8 +55,7 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
         current_token, current_type = tokens[i]
         next_token, next_type = tokens[i + 1]
 
-        space_type = 0
-        space_count = 0
+        space_type = 0 #none
 
         if current_type == 6:
             i+=1
@@ -68,24 +67,24 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
                 next_token, next_type = tokens[i + 2]
 
                 if '\t' in whitespace:
-                    space_type = 2
-                    space_count = 1
+                    space_type = 2 #tab
                 elif '\n' in whitespace:
-                    space_type = 3
-                    space_count = 1
+                    space_type = 3 #newline
                 else:
-                    space_type = 1
-                    space_count = len(whitespace)
+                    if len(whitespace) > 1:
+                        space_type = 4 #multiple spaces
+                    else:
+                        space_type = 1 #one space
             
             input.append((vocab_stoi[current_token], current_type))
-            output.append((space_type, space_count))
+            output.append(space_type)
         except Exception as e:
             pass
         i += 1
 
     if tokens[-1][1] != 6:
         input.append((vocab_stoi[tokens[-1][0]], tokens[-1][1]))
-        output.append((0, 0))
+        output.append(0)
     return input, output
 
 def wrap_in_class(snippet):

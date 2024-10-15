@@ -1,16 +1,13 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class TokenSpacingModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=128, output_dim=4):
+class TokenSpacingModel(torch.nn.Module):
+    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=128, output_dim=5):
         super(TokenSpacingModel, self).__init__()
-        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.type_embedding = nn.Embedding(num_token_types, embedding_dim)
+        self.token_embedding = torch.nn.Embedding(vocab_size, embedding_dim)
+        self.type_embedding = torch.nn.Embedding(num_token_types, embedding_dim)
         
-        self.fc1 = nn.Linear(2 * embedding_dim, hidden_dim)
-        self.fc_type = nn.Linear(hidden_dim, output_dim)
-        self.fc_length = nn.Linear(hidden_dim, 1)
+        self.fc1 = torch.nn.Linear(2 * embedding_dim, hidden_dim)
+        self.fc_type = torch.nn.Linear(hidden_dim, output_dim)
     
     def forward(self, batch_input):
         tokens = batch_input[:, 0]
@@ -33,6 +30,5 @@ class TokenSpacingModel(nn.Module):
         x = torch.relu(self.fc1(combined_embedding))
         
         type_pred = self.fc_type(x)
-        length_pred = self.fc_length(x)
         
-        return type_pred, length_pred
+        return type_pred
