@@ -7,16 +7,7 @@ import re
 def create_vocab(tokens, vocab_stoi, vocab_itos):
     for current_token, current_type in tokens:
         if current_type == 6:
-            if '\t' in current_token and '<TAB>' not in vocab_stoi:
-                vocab_stoi["<TAB>"] = len(vocab_stoi)
-                vocab_itos[len(vocab_itos)] = "<TAB>"
-            elif '\n' in current_token and '<NEWLINE>' not in vocab_stoi:
-                vocab_stoi["<NEWLINE>"] = len(vocab_stoi)
-                vocab_itos[len(vocab_itos)] = "<NEWLINE>"
-            elif '<SPACE>' not in vocab_stoi:
-                vocab_stoi["<SPACE>"] = len(vocab_stoi)
-                vocab_itos[len(vocab_itos)] = "<SPACE>"
-
+            continue
         elif current_token not in vocab_stoi:
             vocab_stoi[current_token] = len(vocab_stoi)
             vocab_itos[len(vocab_itos)] = current_token
@@ -31,8 +22,9 @@ def tokenize_and_classify(code):
         "operator": r'[+\-*/=<>!&|%^]',
         "punctuation": r'[(){}[\];,.]',
         "literal": r'\b\d+(\.\d+)?\b',
-        "whitespace": r'\s+',
+        "whitespace": r'[ \n\t]+',
     }
+
 
     combined_pattern = '|'.join(f'(?P<{key}>{value})' for key, value in token_patterns.items())    
     tokens = []
@@ -63,7 +55,7 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
         current_token, current_type = tokens[i]
         next_token, next_type = tokens[i + 1]
 
-        space_type = "<SPACE>"
+        space_type = 0
         space_count = 0
 
         if current_type == 6:
@@ -76,21 +68,23 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
                 next_token, next_type = tokens[i + 2]
 
                 if '\t' in whitespace:
-                    space_type = '<TAB>'
+                    space_type = 2
                     space_count = 1
                 elif '\n' in whitespace:
-                    space_type = '<NEWLINE>'
+                    space_type = 3
                     space_count = 1
                 else:
-                    space_type = '<SPACE>'
+                    space_type = 1
                     space_count = len(whitespace)
             
-                input.append((vocab_stoi[current_token], current_type, vocab_stoi[next_token], next_type))
-                output.append((vocab_stoi[space_type], space_count))
+            input.append((vocab_stoi[current_token], current_type))
+            output.append((space_type, space_count))
         except Exception as e:
             pass
         i += 1
 
+    input.append((vocab_stoi[tokens[-1][0]], tokens[-1][1]))
+    output.append((0, 0))
     return input, output
 
 def wrap_in_class(snippet):

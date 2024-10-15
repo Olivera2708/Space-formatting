@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 from format_java import format_java_code, tokenize_and_create_input_output, tokenize_and_classify, create_vocab
 from model import CodeFormatterModel
 import torch
+import random
 from torch.utils.data import DataLoader, TensorDataset
 
 def create_datasets():
@@ -39,44 +40,36 @@ def get_input_output_training(train_data):
     return input, output, vocab_stoi, vocab_itos
 
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_type, loss_fn_length, optimizer, device):
-    train_data = TensorDataset(training_inputs, training_outputs)
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    model.to(device)
+    
+    dataset = TensorDataset(training_inputs, training_outputs)
+    dataloader = DataLoader(dataset, batch_size=batch_size)
 
     for epoch in range(epochs):
         model.train()
-        epoch_loss_type = 0
-        epoch_loss_length = 0
+        total_loss = 0
 
-        for input_batch, output_batch in train_loader:
+        for batch_idx, (input_batch, output_batch) in enumerate(dataloader):
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
+
             optimizer.zero_grad()
-            
-            spacing_type, length_of_spacing = model(input_batch)
+            spacing_type_pred, length_of_spacing_pred = model(input_batch)
 
-            print(spacing_type)
-            print(length_of_spacing)
+            print(input_batch)
+            print(spacing_type_pred)
+            print(length_of_spacing_pred)
 
-            print(output_batch[:, 0])
-            print(output_batch[:, 1])
+            loss_type = loss_fn_type(spacing_type_pred, output_batch[:, 0].long())
+            loss_length = loss_fn_length(length_of_spacing_pred, output_batch[:, 1])
+            total_loss_batch = loss_type + loss_length
+            total_loss += total_loss_batch.item()
 
-            loss_type = loss_fn_type(spacing_type, output_batch[:, 0])  # Classification loss
-            loss_length = loss_fn_length(length_of_spacing, output_batch[:, 1])  # Regression loss
+            total_loss_batch.backward()
+            optimizer.step()
 
-            # Total loss
-            loss = loss_type + loss_length
-            loss.backward()  # Backpropagation
-            optimizer.step()  # Update model parameters
-
-            # Accumulate the loss for this epoch
-            epoch_loss_type += loss_type.item()
-            epoch_loss_length += loss_length.item()
-
-        # Print the average loss for this epoch
-        print(f"Epoch [{epoch+1}/{epochs}], Loss Type: {epoch_loss_type / len(train_loader):.4f}, Loss Length: {epoch_loss_length / len(train_loader):.4f}")
-
+        print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss / len(dataloader)}")
 
 
 def eval(model, validation_inputs, validation_outputs, batch_size, loss_fn_type, loss_fn_length, device):
@@ -94,7 +87,6 @@ def eval(model, validation_inputs, validation_outputs, batch_size, loss_fn_type,
         for input_batch, output_batch in val_loader:
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
 
-            # Forward pass
             spacing_type, length_of_spacing = model(*input_batch)
 
             # Calculate the individual losses
