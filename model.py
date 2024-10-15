@@ -1,34 +1,31 @@
-import torch
+import torch.nn as nn
 
-class TokenSpacingModel(torch.nn.Module):
-    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=128, output_dim=5):
+class TokenSpacingModel(nn.Module):
+    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=128, output_dim=5, num_heads=4, num_layers=2):
         super(TokenSpacingModel, self).__init__()
-        self.token_embedding = torch.nn.Embedding(vocab_size, embedding_dim)
-        self.type_embedding = torch.nn.Embedding(num_token_types, embedding_dim)
-        
-        self.fc1 = torch.nn.Linear(2 * embedding_dim, hidden_dim)
-        self.fc_type = torch.nn.Linear(hidden_dim, output_dim)
-    
+
+        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.type_embedding = nn.Embedding(num_token_types, embedding_dim)
+
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=embedding_dim, nhead=num_heads, dim_feedforward=hidden_dim, batch_first=True),
+            num_layers=num_layers
+        )
+
+        self.fc_type = nn.Linear(embedding_dim, output_dim)
+
     def forward(self, batch_input):
         tokens = batch_input[:, 0]
         types = batch_input[:, 1]
-        
-        token_pairs = torch.stack((tokens[:-1], tokens[1:]), dim=1)
-        type_pairs = torch.stack((types[:-1], types[1:]), dim=1)
-        
-        token1_embedding = self.token_embedding(token_pairs[:, 0])
-        token2_embedding = self.token_embedding(token_pairs[:, 1])
-        
-        type1_embedding = self.type_embedding(type_pairs[:, 0])
-        type2_embedding = self.type_embedding(type_pairs[:, 1])
-        
-        combined_token_embedding = token1_embedding + token2_embedding
-        combined_type_embedding = type1_embedding + type2_embedding
-        
-        combined_embedding = torch.cat((combined_token_embedding, combined_type_embedding), dim=1)
-        
-        x = torch.relu(self.fc1(combined_embedding))
-        
-        type_pred = self.fc_type(x)
-        
+
+        token_embeddings = self.token_embedding(tokens)
+        type_embeddings = self.type_embedding(types)
+
+        combined_embeddings = token_embeddings + type_embeddings
+        combined_embeddings = combined_embeddings.unsqueeze(1)
+
+        transformer_output = self.transformer_encoder(combined_embeddings.permute(1, 0, 2))
+        final_token_embedding = transformer_output[-1, :, :]
+
+        type_pred = self.fc_type(final_token_embedding)
         return type_pred

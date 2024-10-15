@@ -54,7 +54,7 @@ def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_
             optimizer.zero_grad()
             spacing_type_pred = model(input_batch)
 
-            loss_type = loss_fn_type(spacing_type_pred, output_batch[:-1])
+            loss_type = loss_fn_type(spacing_type_pred, output_batch)
             total_loss += loss_type.item()
 
             loss_type.backward()
@@ -80,9 +80,9 @@ def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_thresh
             _, top3_pred_type = torch.topk(spacing_type_pred, 3, dim=1)
 
             top1_pred_type = top3_pred_type[:, 0]
-            correct_type_top1 += torch.sum(top1_pred_type == output_batch[:-1]).item()
+            correct_type_top1 += torch.sum(top1_pred_type == output_batch).item()
 
-            correct_type_top3 += torch.sum(torch.isin(output_batch[:-1], top3_pred_type)).item()
+            correct_type_top3 += torch.sum(torch.isin(output_batch, top3_pred_type)).item()
 
             total_type += len(input_batch)
 
