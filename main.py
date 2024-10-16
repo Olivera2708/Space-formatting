@@ -5,6 +5,9 @@ from model import TokenSpacingModel
 import torch
 import random
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def create_datasets():
     data = preprocessing.process_files_in_directory("data/train")
@@ -70,6 +73,9 @@ def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_thresh
     correct_type_top1 = 0
     correct_type_top3 = 0
     total_type = 0
+
+    all_labels = []
+    all_predictions = []
     
     with torch.no_grad():
         for input_batch, output_batch in dataloader:
@@ -86,11 +92,24 @@ def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_thresh
 
             total_type += len(input_batch)
 
+            all_labels.extend(output_batch.cpu().numpy())
+            all_predictions.extend(top1_pred_type.cpu().numpy())
+
     top1_accuracy_type = correct_type_top1 / total_type * 100
     top3_accuracy_type = correct_type_top3 / total_type * 100
 
     print(f"Top-1 Accuracy for Spacing Type: {top1_accuracy_type:.2f}%")
     print(f"Top-3 Accuracy for Spacing Type: {top3_accuracy_type:.2f}%")
+    plot_confusion_matrix(all_labels, all_predictions)
+
+def plot_confusion_matrix(true_labels, pred_labels):
+    cm = confusion_matrix(true_labels, pred_labels)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix of Spacing Type Predictions')
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -107,7 +126,7 @@ if __name__ == "__main__":
 
     code_model = TokenSpacingModel(vocab_size).to(device)
     loss_fn_type = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(code_model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(code_model.parameters(), lr=0.001)
 
     batch_size = 32
     epochs = 10
