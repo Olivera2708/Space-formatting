@@ -17,6 +17,7 @@ def create_vocab(tokens, vocab_stoi, vocab_itos):
 
 def tokenize_and_classify(code):
     code = code.replace("  ", "\t")
+    code = code.replace("\n\t", "\n")
     token_patterns = {
         "keyword": r'\b(public|private|protected|static|final|transient|volatile|abstract|synchronized|native|strictfp|interface|implements|extends|super|this|class|enum|package|import|return|void|if|else|for|while|do|switch|case|default|break|continue|try|catch|finally|throw|throws|assert|instanceof|new|instanceof|const|goto|boolean|byte|char|short|int|long|float|double)\b',
         "identifier": r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
@@ -68,9 +69,9 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
                 next_token, next_type = tokens[i + 2]
 
                 if '\n' == whitespace:
-                    space_type = 2 #newline
+                    space_type = 3 #newline
                 elif '\n' in whitespace and '\t' in whitespace:
-                    space_type = 3 #newline+tab
+                    space_type = 2 #newline+tab
                 else:
                     space_type = 1 #space
             
