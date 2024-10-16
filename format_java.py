@@ -16,6 +16,7 @@ def create_vocab(tokens, vocab_stoi, vocab_itos):
 
 
 def tokenize_and_classify(code):
+    code = code.replace("  ", "\t")
     token_patterns = {
         "keyword": r'\b(public|private|protected|static|final|transient|volatile|abstract|synchronized|native|strictfp|interface|implements|extends|super|this|class|enum|package|import|return|void|if|else|for|while|do|switch|case|default|break|continue|try|catch|finally|throw|throws|assert|instanceof|new|instanceof|const|goto|boolean|byte|char|short|int|long|float|double)\b',
         "identifier": r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
@@ -66,15 +67,12 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
                 whitespace = next_token
                 next_token, next_type = tokens[i + 2]
 
-                if '\t' in whitespace:
-                    space_type = 2 #tab
-                elif '\n' in whitespace:
-                    space_type = 3 #newline
+                if '\n' == whitespace:
+                    space_type = 2 #newline
+                elif '\n' in whitespace and '\t' in whitespace:
+                    space_type = 3 #newline+tab
                 else:
-                    if len(whitespace) > 1:
-                        space_type = 4 #multiple spaces
-                    else:
-                        space_type = 1 #one space
+                    space_type = 1 #space
             
             input.append((vocab_stoi[current_token], current_type))
             output.append(space_type)
@@ -86,6 +84,48 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
         input.append((vocab_stoi[tokens[-1][0]], tokens[-1][1]))
         output.append(0)
     return input, output
+
+# def tokenize_sentence_and_create_input_output(tokens, vocab_stoi):
+#     input = []
+#     output = []
+#     i = 0
+
+#     current_input = []
+#     current_output = []
+    
+#     while i < len(tokens) - 1:
+#         current_token, current_type = tokens[i]
+
+#         if current_type == 6 and '\n' in current_token:
+#             input.append(current_input)
+#             output.append(current_output)
+#             current_input = []
+#             current_output = []
+#         else:
+#             if current_type == 6:
+#                 if '\t' in current_token:
+#                     space_type = 2 #tab
+#                 elif '\n' in current_token:
+#                     input.append(current_input)
+#                     output.append(current_output)
+#                 else:
+#                     space_type = 1 #one space
+#                 current_output.append(space_type)
+#             else:
+#                 if current_type != 6 and tokens[i+1] != 6:
+#                     current_output.append(0) #no space
+#                 if current_output == []:
+#                     current_output.append(0)
+#                 current_input.append(current_token)
+#         i += 1
+
+#     if tokens[-1][1] != 6:
+#         current_input.append(vocab_stoi[tokens[-1][0]])
+#         current_output.append(0)
+
+#     input.append(current_input)
+#     output.append(current_output)
+#     return input, output
 
 def wrap_in_class(snippet):
     wrapped_code = f"public class Temp {{\n{snippet}\n}}"

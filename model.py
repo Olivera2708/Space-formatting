@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 class TokenSpacingModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=256, output_dim=5, num_heads=8, num_layers=6):
+    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=256, output_dim=4, num_heads=8, num_layers=6):
         super(TokenSpacingModel, self).__init__()
 
         self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
