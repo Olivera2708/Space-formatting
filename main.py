@@ -64,6 +64,7 @@ def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_
             optimizer.step()
 
         print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss / len(dataloader)}")
+    torch.save(model.state_dict(), "model.pth")
 
 def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_threshold=0.1):
     model.eval()
@@ -111,6 +112,13 @@ def plot_confusion_matrix(true_labels, pred_labels):
     plt.title('Confusion Matrix of Spacing Type Predictions')
     plt.show()
 
+def load_model(model_class, vocab_size, model_path, device):
+    model = model_class(vocab_size)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.to(device)
+    model.eval()
+    return model
+
 
 if __name__ == "__main__":
     # create_datasets()
@@ -131,7 +139,9 @@ if __name__ == "__main__":
     batch_size = 32
     epochs = 10
 
-    print("--- TRAINING STARTED ---")
-    train(code_model, epochs, training_inputs, training_outputs, batch_size, loss_fn_type, optimizer, device)
+    # print("--- TRAINING STARTED ---")
+    # train(code_model, epochs, training_inputs, training_outputs, batch_size, loss_fn_type, optimizer, device)
+    print("--- LOADING MODEL ---")
+    code_model = load_model(TokenSpacingModel, vocab_size, "model.pth", device)
     print("--- EVALUATION STARTED ---")
     evaluate(code_model, validation_inputs, validation_outputs, batch_size, device)
