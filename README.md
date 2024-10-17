@@ -41,8 +41,8 @@ The dataset is divided into two main parts (80/20):
 The performance of the trained Transformer model was evaluated on a total of 10,000 Java code snippets, which includes both the training and validation sets. The model's ability to predict spacing between tokens was measured using top-1 and top-3 accuracy metrics.
 
 ### Accuracy Metrics
-- **Top-1 Accuracy**: 79.87%
-- **Top-3 Accuracy**: 99.89%
+- **Top-1 Accuracy**: 80.50%
+- **Top-3 Accuracy**: 100.00%
 
 These results indicate that the model effectively predicts the correct spacing between consecutive tokens in Java code.
 
