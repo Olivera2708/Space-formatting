@@ -20,6 +20,7 @@ def tokenize_and_classify(code):
     code = code.replace("\n\t", "\n")
     token_patterns = {
         "keyword": r'\b(public|private|protected|static|final|transient|volatile|abstract|synchronized|native|strictfp|interface|implements|extends|super|this|class|enum|package|import|return|void|if|else|for|while|do|switch|case|default|break|continue|try|catch|finally|throw|throws|assert|instanceof|new|instanceof|const|goto|boolean|byte|char|short|int|long|float|double)\b',
+        "annotation": r'@\b[a-zA-Z_][a-zA-Z0-9_]*\b',
         "identifier": r'\b[a-zA-Z_][a-zA-Z0-9_]*\b',
         "operator": r'[+\-*/=<>!&|%^]',
         "punctuation": r'[(){}[\];,.]',
@@ -34,6 +35,8 @@ def tokenize_and_classify(code):
         for token_type, token_value in match.groupdict().items():
             if token_value:
                 if token_type == 'keyword':
+                    tokens.append((token_value, 0))
+                elif token_type == 'annotation':
                     tokens.append((token_value, 1))
                 elif token_type == 'identifier':
                     tokens.append((token_value, 2))

@@ -40,7 +40,6 @@ def get_input_output_training(train_data):
         input.extend(new_input)
         output.extend(new_output)
 
-
     return input, output, vocab_stoi, vocab_itos
 
 def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_type, optimizer, device):
