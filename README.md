@@ -10,7 +10,7 @@ The model is designed to predict the spacing between two consecutive tokens in J
 
 ### Source
 
-The dataset used for this project is the Java subset from the [CodeSearchNet dataset](https://github.com/github/CodeSearchNet), which contains a diverse collection of Java code snippets sourced from various open-source repositories on GitHub. This dataset provides a rich resource for training and evaluating machine learning models on programming tasks.
+The dataset used for this project is the Java subset from the [CodeSearchNet dataset](https://huggingface.co/datasets/code-search-net/code_search_net/tree/main), which contains a diverse collection of Java code snippets sourced from various open-source repositories on GitHub. This dataset provides a rich resource for training and evaluating machine learning models on programming tasks.
 
 ### Preprocessing
 
@@ -61,7 +61,7 @@ The model categorizes spacing into four classes:
 - **Newline and Tab (2)**: Indicates that both a newline and a tab character should be inserted.
 - **Newline (3)**: Indicates that a newline character should be inserted.
 
-## How to Use / Replicate the Project
+## How to Use
 
 To replicate the results of this project and train your own model, follow the steps below:
 
