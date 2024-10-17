@@ -1,31 +1,30 @@
+import torch
 import torch.nn as nn
+import torch.optim as optim
 
 class TokenSpacingModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim=64, num_token_types=6, hidden_dim=256, output_dim=4, num_heads=8, num_layers=6):
+    def __init__(self, input_dim, model_dim=128, output_dim=4, num_heads=8, num_layers=3, dropout=0.1):
         super(TokenSpacingModel, self).__init__()
-
-        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.type_embedding = nn.Embedding(num_token_types, embedding_dim)
-
-        self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=embedding_dim, nhead=num_heads, dim_feedforward=hidden_dim, batch_first=True),
+        self.embedding = nn.Embedding(input_dim+1, model_dim)
+        self.transformer = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=model_dim, nhead=num_heads, dropout=dropout),
             num_layers=num_layers
         )
+        self.fc = nn.Linear(model_dim, output_dim)
+        
+    def forward(self, x):
+        padding_mask = (x != -1)
+        x = self.embedding(x)
+        x = x.permute(1, 0, 2)
+        x = self.transformer(x, src_key_padding_mask=~padding_mask)
 
-        self.fc_type = nn.Linear(embedding_dim, output_dim)
+        output_pairs = []
+        for i in range(1, x.size(0) - 1):  # Start from 1 and go to n-1 to avoid out of bounds
+            # Concatenate previous, current, and next token representations
+            combined = torch.cat((x[i-1], x[i], x[i+1]), dim=-1)  # (model_dim * 3,)
 
-    def forward(self, batch_input):
-        tokens = batch_input[:, 0]
-        types = batch_input[:, 1]
+        # Stack the outputs and return
+        output_pairs = self.fc(combined)  # Shape: (sequence_length - 2, batch_size, output_dim)
+        print(output_pairs)
+        return output_pairs
 
-        token_embeddings = self.token_embedding(tokens)
-        type_embeddings = self.type_embedding(types)
-
-        combined_embeddings = token_embeddings + type_embeddings
-        combined_embeddings = combined_embeddings.unsqueeze(1)
-
-        transformer_output = self.transformer_encoder(combined_embeddings.permute(1, 0, 2))
-        final_token_embedding = transformer_output[-1, :, :]
-
-        type_pred = self.fc_type(final_token_embedding)
-        return type_pred

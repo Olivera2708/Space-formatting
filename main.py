@@ -1,6 +1,6 @@
 import preprocessing
 from sklearn.model_selection import train_test_split
-from format_java import format_java_code, tokenize_and_create_input_output, tokenize_and_classify, create_vocab
+from format_java import format_java_code, tokenize_sentence_and_create_input_output, tokenize_and_classify, create_vocab
 from model import TokenSpacingModel
 import torch
 import random
@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
+from torch.nn.utils.rnn import pad_sequence
 
 def create_datasets():
     data = preprocessing.process_files_in_directory("data/train")
@@ -27,15 +28,15 @@ def create_datasets():
     data.to_json("data/training.jsonl", orient="records", lines=True)
 
 def get_input_output_training(train_data):
-    vocab_stoi = {"<UNK>": 0}
-    vocab_itos = {0: "<UNK>"}
+    vocab_stoi = {"<PAD>": 0, "<UNK>": 1}
+    vocab_itos = {0: "<PAD>", 1: "<UNK>"}
     input = []
     output = []
 
     for d in train_data["formatted"]:
         tokens = tokenize_and_classify(d)
         vocab_stoi, vocab_itos = create_vocab(tokens, vocab_stoi, vocab_itos)
-        new_input, new_output = tokenize_and_create_input_output(tokens, vocab_stoi)
+        new_input, new_output = tokenize_sentence_and_create_input_output(tokens, vocab_stoi)
 
         input.extend(new_input)
         output.extend(new_output)
@@ -54,10 +55,14 @@ def train(model, epochs, training_inputs, training_outputs, batch_size, loss_fn_
 
         for input_batch, output_batch in dataloader:
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
+
             optimizer.zero_grad()
             spacing_type_pred = model(input_batch)
 
-            loss_type = loss_fn_type(spacing_type_pred, output_batch)
+            predictions_reshaped = spacing_type_pred.reshape(-1, 4)
+            correct_reshaped = output_batch.reshape(-1)
+
+            loss_type = loss_fn_type(predictions_reshaped, correct_reshaped)
             total_loss += loss_type.item()
 
             loss_type.backward()
@@ -73,43 +78,26 @@ def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_thresh
     correct_type_top1 = 0
     correct_type_top3 = 0
     total_type = 0
-
-    all_labels = []
-    all_predictions = []
     
     with torch.no_grad():
         for input_batch, output_batch in dataloader:
             input_batch, output_batch = input_batch.to(device), output_batch.to(device)
 
             spacing_type_pred = model(input_batch)
+            predictions_reshaped = spacing_type_pred.reshape(-1, 4)
 
-            _, top3_pred_type = torch.topk(spacing_type_pred, 3, dim=1)
+            _, top_k_indices = torch.topk(predictions_reshaped, k=3, dim=1, largest=True, sorted=True)
+            correct_reshaped = output_batch.reshape(-1)
+            total_type += correct_reshaped.size(0)
 
-            top1_pred_type = top3_pred_type[:, 0]
-            correct_type_top1 += torch.sum(top1_pred_type == output_batch).item()
-
-            correct_type_top3 += torch.sum(torch.isin(output_batch, top3_pred_type)).item()
-
-            total_type += len(input_batch)
-
-            all_labels.extend(output_batch.cpu().numpy())
-            all_predictions.extend(top1_pred_type.cpu().numpy())
+            correct_type_top1 += (top_k_indices[:, 0] == correct_reshaped).sum().item()
+            correct_type_top3 += (top_k_indices == correct_reshaped.unsqueeze(1)).sum().item()
 
     top1_accuracy_type = correct_type_top1 / total_type * 100
     top3_accuracy_type = correct_type_top3 / total_type * 100
 
     print(f"Top-1 Accuracy for Spacing Type: {top1_accuracy_type:.2f}%")
     print(f"Top-3 Accuracy for Spacing Type: {top3_accuracy_type:.2f}%")
-    plot_confusion_matrix(all_labels, all_predictions)
-
-def plot_confusion_matrix(true_labels, pred_labels):
-    cm = confusion_matrix(true_labels, pred_labels)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.title('Confusion Matrix of Spacing Type Predictions')
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -117,18 +105,20 @@ if __name__ == "__main__":
     data = preprocessing.load_data("data.jsonl")
 
     input, output, vocab_stoi, vocab_itos = get_input_output_training(data)
-    input = torch.tensor(input, dtype=torch.long)
-    output = torch.tensor(output, dtype=torch.long)
+    input = [torch.tensor(inp) for inp in input]
+    output = [torch.tensor(out) for out in output]
+    input = pad_sequence(input, batch_first=True, padding_value=0)
+    output = pad_sequence(output, batch_first=True, padding_value=-1)
     training_inputs, validation_inputs, training_outputs, validation_outputs = train_test_split(input, output, test_size=0.2, random_state=27)
 
     vocab_size = len(vocab_stoi)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     code_model = TokenSpacingModel(vocab_size).to(device)
-    loss_fn_type = torch.nn.CrossEntropyLoss()
+    loss_fn_type = torch.nn.CrossEntropyLoss(ignore_index=-1)
     optimizer = torch.optim.AdamW(code_model.parameters(), lr=0.001)
 
-    batch_size = 32
+    batch_size = 2
     epochs = 10
 
     print("--- TRAINING STARTED ---")
