@@ -3,28 +3,32 @@ from sklearn.model_selection import train_test_split
 from format_java import format_java_code, tokenize_and_create_input_output, tokenize_and_classify, create_vocab
 from model import TokenSpacingModel
 import torch
-import random
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 def create_datasets():
-    data = preprocessing.process_files_in_directory("data/train")
-    data['formatted'] = data['code'].apply(format_java_code)
-    data = data.dropna(subset=['formatted'])
-    data = data[data['formatted'] != data['code']]
-    data.to_json("data/training.jsonl", orient="records", lines=True)
+    all_data = pd.DataFrame()
 
-    data = preprocessing.load_data("data/test_orig.jsonl")
-    data['formatted'] = data['code'].apply(format_java_code)
-    data.to_json("test.jsonl", orient="records", lines=True)
+    train_data = preprocessing.process_files_in_directory("data/train")
+    train_data['formatted'] = train_data['code'].apply(format_java_code)
+    train_data = train_data.dropna(subset=['formatted'])
+    train_data = train_data[train_data['formatted'] != train_data['code']]
+    all_data = pd.concat([all_data, train_data[['formatted']]], ignore_index=True)
 
-    data = preprocessing.load_data("data/train/train0.jsonl")
-    data['formatted'] = data['code'].apply(format_java_code)
-    data = data.dropna(subset=['formatted'])
-    data = data[data['formatted'] != data['code']]
-    data.to_json("data/training.jsonl", orient="records", lines=True)
+    test_data = preprocessing.load_data("data/test.jsonl")
+    test_data['formatted'] = test_data['code'].apply(format_java_code)
+    all_data = pd.concat([all_data, test_data[['formatted']]], ignore_index=True)
+
+    additional_train_data = preprocessing.load_data("data/valid.jsonl")
+    additional_train_data['formatted'] = additional_train_data['code'].apply(format_java_code)
+    additional_train_data = additional_train_data.dropna(subset=['formatted'])
+    additional_train_data = additional_train_data[additional_train_data['formatted'] != additional_train_data['code']]
+    all_data = pd.concat([all_data, additional_train_data[['formatted']]], ignore_index=True)
+
+    all_data.to_json("data.jsonl", orient="records", lines=True)
 
 def get_input_output_training(train_data):
     vocab_stoi = {"<UNK>": 0}

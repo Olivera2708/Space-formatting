@@ -89,48 +89,6 @@ def tokenize_and_create_input_output(tokens, vocab_stoi):
         output.append(0)
     return input, output
 
-# def tokenize_sentence_and_create_input_output(tokens, vocab_stoi):
-#     input = []
-#     output = []
-#     i = 0
-
-#     current_input = []
-#     current_output = []
-    
-#     while i < len(tokens) - 1:
-#         current_token, current_type = tokens[i]
-
-#         if current_type == 6 and '\n' in current_token:
-#             input.append(current_input)
-#             output.append(current_output)
-#             current_input = []
-#             current_output = []
-#         else:
-#             if current_type == 6:
-#                 if '\t' in current_token:
-#                     space_type = 2 #tab
-#                 elif '\n' in current_token:
-#                     input.append(current_input)
-#                     output.append(current_output)
-#                 else:
-#                     space_type = 1 #one space
-#                 current_output.append(space_type)
-#             else:
-#                 if current_type != 6 and tokens[i+1] != 6:
-#                     current_output.append(0) #no space
-#                 if current_output == []:
-#                     current_output.append(0)
-#                 current_input.append(current_token)
-#         i += 1
-
-#     if tokens[-1][1] != 6:
-#         current_input.append(vocab_stoi[tokens[-1][0]])
-#         current_output.append(0)
-
-#     input.append(current_input)
-#     output.append(current_output)
-#     return input, output
-
 def wrap_in_class(snippet):
     wrapped_code = f"public class Temp {{\n{snippet}\n}}"
     return wrapped_code
