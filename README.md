@@ -88,6 +88,8 @@ Download the Java subset of the [CodeSearchNet dataset](https://github.com/githu
 
 ### 4. Prepare the Dataset
 
+You can use the `data.jsonl` file from the repository, which consists of approximately 70,000 formatted Java codes, or generate your own, larger one:
+
 1. Unzip the downloaded dataset.
 2. Create a folder named `dataset` in the root directory of your project.
 3. Copy the relevant data files from the unzipped dataset into the `dataset` folder. The structure should look like this:
@@ -103,10 +105,8 @@ Download the Java subset of the [CodeSearchNet dataset](https://github.com/githu
    │   └── test.jsonl
    ```
 
-### 5. Generate Formatted Dataset
+4. Uncomment the `create_datasets` function in `main.py` to generate the formatted dataset. This function will apply Google Java Format to ensure consistency in the code snippets.
 
-Uncomment the `create_datasets` function in `main.py` to generate the formatted dataset. This function will apply Google Java Format to ensure consistency in the code snippets.
-
-### 6. Training the Model
+### 5. Training the Model
 
 You can either use the pre-trained model (`model.pth`) provided in this repository or train your own model from scratch. Based on your choice, uncomment and comment the last lines in `main.py` accordingly.
