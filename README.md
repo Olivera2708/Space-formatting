@@ -63,6 +63,8 @@ The model categorizes spacing into four classes:
 
 ## How to Use
 
+You can explore and run the evaluation yourself by downloading the [notebook](notebook.ipynb) and uploading it to your Google Collab.
+
 To replicate the results of this project and train your own model, follow the steps below:
 
 ### 1. Clone the Repository
