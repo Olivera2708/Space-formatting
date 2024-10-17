@@ -105,7 +105,7 @@ def evaluate(model, eval_inputs, eval_outputs, batch_size, device, length_thresh
 
     print(f"Top-1 Accuracy for Spacing Type: {top1_accuracy_type:.2f}%")
     print(f"Top-3 Accuracy for Spacing Type: {top3_accuracy_type:.2f}%")
-    # plot_confusion_matrix(all_labels, all_predictions)
+    plot_confusion_matrix(all_labels, all_predictions)
 
 def plot_confusion_matrix(true_labels, pred_labels):
     cm = confusion_matrix(true_labels, pred_labels)
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     loss_fn_type = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(code_model.parameters(), lr=0.001)
 
-    batch_size = 32
+    batch_size = 4092
     epochs = 10
 
     # print("--- TRAINING STARTED ---")
